@@ -18,8 +18,8 @@ Then visit `http://localhost:8000`.
 
 1. Select a month and day, or choose **Play Today**.
 2. Select **Load Challenge** to fetch events for that date.
-3. Add an optional time guess to each event and pin any card you want to lock in its current position.
-4. Hold and drag anywhere on an unpinned event card, except its Pin button or time field, to arrange the events from earliest to latest.
+3. Add an optional time guess to each event and press Enter to finish the entry. Pin any card you want to lock in its current position.
+4. Hold and drag anywhere on an unpinned event card, except its Pin button or time field, to arrange the events from earliest to latest. The card follows the pointer freely and changes position only when you release it. You can move outside the timeline width, and holding near the top or bottom edge scrolls the page automatically.
 5. Select **Submit Timeline** to reveal the dates, the correct order, and your score.
 6. Try the same challenge again, choose another date, or copy a link to share it.
 

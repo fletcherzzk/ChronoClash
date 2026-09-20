@@ -57,11 +57,12 @@
             <h2 id="game-heading">Build the timeline</h2>
             <p id="challenge-date" class="challenge-date"></p>
           </div>
-          <p class="direction-note">Earliest <span aria-hidden="true">→</span> Latest</p>
         </div>
 
+        <p id="game-instructions" class="game-instructions">Hold and drag a card, then release it over the closest timeline position. Pin events you feel sure about, and enter time guesses to help arrange the rest.</p>
+
         <div class="timeline-layout">
-          <ol id="event-list" class="event-list" aria-label="Events to arrange"></ol>
+          <ol id="event-list" class="event-list" aria-label="Events to arrange" aria-describedby="game-instructions"></ol>
           <aside class="timeline-scale" aria-label="Timeline direction: earliest at the top and latest at the bottom">
             <span>Earliest</span>
             <span class="scale-track" aria-hidden="true"></span>
@@ -70,7 +71,6 @@
         </div>
 
         <div class="submit-row">
-          <p>Hold and drag an event card to move it, pin positions you feel sure about, and record your time guesses.</p>
           <button class="button button-accent" id="submit-button" type="button">Submit Timeline</button>
         </div>
       </section>

@@ -338,15 +338,12 @@ select {
   font-size: 1.15rem;
 }
 
-.direction-note {
-  margin: 0;
+.game-instructions {
+  max-width: none;
+  margin: 20px 0 0;
   color: var(--muted);
-  font-family: Arial, sans-serif;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
+  font-size: 1.05rem;
+  line-height: 1.55;
 }
 
 .event-list,
@@ -483,6 +480,11 @@ select {
   user-select: none;
 }
 
+.event-card.drop-target:not(.is-dragging) {
+  outline: 3px dashed var(--card-accent);
+  outline-offset: 3px;
+}
+
 .event-card.is-settling {
   position: relative;
   z-index: 9;
@@ -616,6 +618,7 @@ select {
 
 .submit-row .button {
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .score-panel {

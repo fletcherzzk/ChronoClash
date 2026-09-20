@@ -357,7 +357,7 @@ function createAnnotationField(event) {
   input.value = event.annotation;
   input.maxLength = 8;
   input.inputMode = "numeric";
-  input.placeholder = "2000";
+  input.placeholder = "eg: 2000";
   input.disabled = state.submitted;
 
   label.append(labelText, input);
@@ -530,12 +530,141 @@ function handlePointerDown(event) {
     card,
     eventId: card.dataset.eventId,
     pointerId: event.pointerId,
+    grabOffsetX: event.clientX - cardBounds.left,
     grabOffsetY: event.clientY - cardBounds.top,
+    lastClientX: event.clientX,
+    lastClientY: event.clientY,
+    startX: event.clientX,
+    startY: event.clientY,
+    translateX: 0,
     translateY: 0,
+    destinationIndex: state.playerOrder.findIndex(
+      (item) => item.id === card.dataset.eventId
+    ),
     started: false,
-    hasReordered: false
+    autoScrollFrame: null
   };
   card.setPointerCapture(event.pointerId);
+}
+
+function positionDraggedCard(clientX, clientY) {
+  const { card } = pointerDrag;
+  const cardBounds = card.getBoundingClientRect();
+  const layoutLeft = cardBounds.left - pointerDrag.translateX;
+  const layoutTop = cardBounds.top - pointerDrag.translateY;
+  pointerDrag.translateX = clientX - pointerDrag.grabOffsetX - layoutLeft;
+  pointerDrag.translateY = clientY - pointerDrag.grabOffsetY - layoutTop;
+  card.style.transform = `translate(${pointerDrag.translateX}px, ${pointerDrag.translateY}px)`;
+}
+
+function findClosestMovableCard(clientX, clientY) {
+  const safeX = Math.max(0, Math.min(window.innerWidth - 1, clientX));
+  const safeY = Math.max(0, Math.min(window.innerHeight - 1, clientY));
+  const pointedElement = document.elementFromPoint(safeX, safeY);
+  const directCard = pointedElement ? pointedElement.closest(".event-card") : null;
+
+  if (directCard) {
+    const directEvent = state.playerOrder.find(
+      (item) => item.id === directCard.dataset.eventId
+    );
+
+    if (directEvent && !directEvent.pinned) {
+      return directCard;
+    }
+  }
+
+  const movableCards = [...elements.eventList.children].filter((card) => {
+    const item = state.playerOrder.find((event) => event.id === card.dataset.eventId);
+    return item && !item.pinned;
+  });
+
+  return movableCards.reduce((closestCard, card) => {
+    const cardBounds = card.getBoundingClientRect();
+    const cardTop = card.dataset.eventId === pointerDrag.eventId
+      ? cardBounds.top - pointerDrag.translateY
+      : cardBounds.top;
+    const cardDistance = Math.abs(clientY - (cardTop + cardBounds.height / 2));
+
+    if (!closestCard || cardDistance < closestCard.distance) {
+      return { card, distance: cardDistance };
+    }
+
+    return closestCard;
+  }, null)?.card || null;
+}
+
+function clearDropTarget() {
+  elements.eventList.querySelectorAll(".drop-target").forEach((card) => {
+    card.classList.remove("drop-target");
+  });
+}
+
+function updateDropDestination(clientX, clientY) {
+  const targetCard = findClosestMovableCard(clientX, clientY);
+  clearDropTarget();
+
+  if (!targetCard) {
+    return;
+  }
+
+  pointerDrag.destinationIndex = state.playerOrder.findIndex(
+    (item) => item.id === targetCard.dataset.eventId
+  );
+
+  if (targetCard.dataset.eventId !== pointerDrag.eventId) {
+    targetCard.classList.add("drop-target");
+  }
+}
+
+function getAutoScrollSpeed(clientY) {
+  const edgeSize = Math.min(90, window.innerHeight / 3);
+  const maximumSpeed = 16;
+
+  if (clientY < edgeSize) {
+    return -maximumSpeed * Math.min(1, (edgeSize - clientY) / edgeSize);
+  }
+
+  if (clientY > window.innerHeight - edgeSize) {
+    return maximumSpeed * Math.min(
+      1,
+      (clientY - (window.innerHeight - edgeSize)) / edgeSize
+    );
+  }
+
+  return 0;
+}
+
+function runAutoScroll() {
+  if (!pointerDrag || !pointerDrag.started) {
+    return;
+  }
+
+  pointerDrag.autoScrollFrame = null;
+  const scrollSpeed = getAutoScrollSpeed(pointerDrag.lastClientY);
+
+  if (scrollSpeed === 0) {
+    return;
+  }
+
+  const previousScrollPosition = window.scrollY;
+  window.scrollBy(0, scrollSpeed);
+
+  if (window.scrollY !== previousScrollPosition) {
+    positionDraggedCard(pointerDrag.lastClientX, pointerDrag.lastClientY);
+    updateDropDestination(pointerDrag.lastClientX, pointerDrag.lastClientY);
+    pointerDrag.autoScrollFrame = window.requestAnimationFrame(runAutoScroll);
+  }
+}
+
+function updateAutoScroll() {
+  const scrollSpeed = getAutoScrollSpeed(pointerDrag.lastClientY);
+
+  if (scrollSpeed !== 0 && pointerDrag.autoScrollFrame === null) {
+    pointerDrag.autoScrollFrame = window.requestAnimationFrame(runAutoScroll);
+  } else if (scrollSpeed === 0 && pointerDrag.autoScrollFrame !== null) {
+    window.cancelAnimationFrame(pointerDrag.autoScrollFrame);
+    pointerDrag.autoScrollFrame = null;
+  }
 }
 
 function handlePointerMove(event) {
@@ -544,71 +673,25 @@ function handlePointerMove(event) {
   }
 
   event.preventDefault();
-  const { card } = pointerDrag;
-  const cardBounds = card.getBoundingClientRect();
-  const layoutTop = cardBounds.top - pointerDrag.translateY;
-  const nextTranslateY = event.clientY - pointerDrag.grabOffsetY - layoutTop;
+  pointerDrag.lastClientX = event.clientX;
+  pointerDrag.lastClientY = event.clientY;
+  const movementDistance = Math.hypot(
+    event.clientX - pointerDrag.startX,
+    event.clientY - pointerDrag.startY
+  );
 
-  if (!pointerDrag.started && Math.abs(nextTranslateY) < 5) {
+  if (!pointerDrag.started && movementDistance < 5) {
     return;
   }
 
   if (!pointerDrag.started) {
     pointerDrag.started = true;
-    card.classList.add("is-dragging");
+    pointerDrag.card.classList.add("is-dragging");
   }
 
-  pointerDrag.translateY = nextTranslateY;
-  card.style.transform = `translateY(${nextTranslateY}px)`;
-
-  const pointedElement = document.elementFromPoint(event.clientX, event.clientY);
-  const targetCard = pointedElement ? pointedElement.closest(".event-card") : null;
-  const targetEvent = targetCard
-    ? state.playerOrder.find((item) => item.id === targetCard.dataset.eventId)
-    : null;
-
-  if (
-    !targetCard
-    || !targetEvent
-    || targetEvent.pinned
-    || targetCard === card
-  ) {
-    return;
-  }
-
-  const sourceIndex = state.playerOrder.findIndex((item) => item.id === pointerDrag.eventId);
-  const destinationIndex = state.playerOrder.findIndex((item) => item.id === targetEvent.id);
-  const targetBounds = targetCard.getBoundingClientRect();
-  const targetMiddle = targetBounds.top + targetBounds.height / 2;
-
-  if (
-    (destinationIndex > sourceIndex && event.clientY < targetMiddle)
-    || (destinationIndex < sourceIndex && event.clientY > targetMiddle)
-  ) {
-    return;
-  }
-
-  const cards = [...elements.eventList.children];
-  const previousTops = new Map(
-    cards.map((eventCard) => [eventCard, eventCard.getBoundingClientRect().top])
-  );
-  const previousDraggedTop = card.getBoundingClientRect().top;
-
-  if (!reorderEventInState(pointerDrag.eventId, destinationIndex)) {
-    return;
-  }
-
-  state.playerOrder.forEach((item) => {
-    const eventCard = elements.eventList.querySelector(`[data-event-id="${item.id}"]`);
-    elements.eventList.append(eventCard);
-  });
-
-  const draggedTopAfterReorder = card.getBoundingClientRect().top;
-  pointerDrag.translateY += previousDraggedTop - draggedTopAfterReorder;
-  card.style.transform = `translateY(${pointerDrag.translateY}px)`;
-  pointerDrag.hasReordered = true;
-  animateReorderedCards(cards, previousTops, card);
-  updateCardPositionLabels();
+  positionDraggedCard(event.clientX, event.clientY);
+  updateDropDestination(event.clientX, event.clientY);
+  updateAutoScroll();
 }
 
 function finishPointerDrag(event) {
@@ -617,22 +700,73 @@ function finishPointerDrag(event) {
   }
 
   const finishedDrag = pointerDrag;
-  pointerDrag = null;
-  finishedDrag.card.classList.remove("is-dragging");
+
+  if (finishedDrag.autoScrollFrame !== null) {
+    window.cancelAnimationFrame(finishedDrag.autoScrollFrame);
+  }
 
   if (!finishedDrag.started) {
+    clearDropTarget();
+    pointerDrag = null;
     return;
   }
 
+  // The card floats freely while held. Commit one state change only on release.
+  const shouldCommitMove = event.type === "pointerup";
+
+  if (shouldCommitMove) {
+    updateDropDestination(finishedDrag.lastClientX, finishedDrag.lastClientY);
+  }
+
+  // Clear this before moving a DOM node so a lost-capture event cannot finish
+  // the same drag a second time.
+  pointerDrag = null;
+  const cards = [...elements.eventList.children];
+  const previousTops = new Map(
+    cards.map((card) => [card, card.getBoundingClientRect().top])
+  );
+  const visualPositionBeforeMove = finishedDrag.card.getBoundingClientRect();
+  const moved = shouldCommitMove && reorderEventInState(
+    finishedDrag.eventId,
+    finishedDrag.destinationIndex
+  );
+
+  if (moved) {
+    state.playerOrder.forEach((item) => {
+      const card = elements.eventList.querySelector(
+        `[data-event-id="${item.id}"]`
+      );
+      elements.eventList.append(card);
+    });
+
+    // Moving the DOM node changes its layout position. Offset that change so
+    // the card stays under the pointer, then animate it into its new slot.
+    const visualPositionAfterMove = finishedDrag.card.getBoundingClientRect();
+    finishedDrag.translateX += (
+      visualPositionBeforeMove.left - visualPositionAfterMove.left
+    );
+    finishedDrag.translateY += (
+      visualPositionBeforeMove.top - visualPositionAfterMove.top
+    );
+    finishedDrag.card.style.transform = (
+      `translate(${finishedDrag.translateX}px, ${finishedDrag.translateY}px)`
+    );
+
+    animateReorderedCards(cards, previousTops, finishedDrag.card);
+    updateCardPositionLabels();
+  }
+
+  clearDropTarget();
+  finishedDrag.card.classList.remove("is-dragging");
   finishedDrag.card.classList.add("is-settling");
-  requestAnimationFrame(() => {
+  window.requestAnimationFrame(() => {
     finishedDrag.card.style.transform = "";
   });
   window.setTimeout(() => {
     finishedDrag.card.classList.remove("is-settling");
   }, 190);
 
-  if (finishedDrag.hasReordered) {
+  if (moved) {
     const destinationIndex = state.playerOrder.findIndex(
       (item) => item.id === finishedDrag.eventId
     );
@@ -799,10 +933,20 @@ function attachEventListeners() {
     }
   });
 
+  elements.eventList.addEventListener("keydown", (event) => {
+    const input = event.target.closest(".event-annotation");
+
+    if (input && event.key === "Enter") {
+      event.preventDefault();
+      input.blur();
+    }
+  });
+
   elements.eventList.addEventListener("pointerdown", handlePointerDown);
   elements.eventList.addEventListener("pointermove", handlePointerMove);
   elements.eventList.addEventListener("pointerup", finishPointerDrag);
   elements.eventList.addEventListener("pointercancel", finishPointerDrag);
+  elements.eventList.addEventListener("lostpointercapture", finishPointerDrag);
 
   elements.submitButton.addEventListener("click", submitTimeline);
   elements.retryButton.addEventListener("click", retryChallenge);

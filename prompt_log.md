@@ -72,3 +72,15 @@ I asked the AI to repair dragging, remove the keyboard movement control, and mak
 ## Prompt 9: whole-card smooth dragging
 
 I asked the AI to remove the six-dot drag grip and let players drag by holding the event card itself. Dragging now follows the mouse or touch position, waits for a small movement before starting, changes slots only after crossing another card's midpoint, and animates nearby cards into their new positions. The Pin button and time field remain excluded from the drag surface.
+
+## Prompt 10: edge dragging and automatic scrolling
+
+I asked the AI to let a dragged event move beyond the timeline's horizontal boundaries and remain active near the page edges. The card now follows horizontal and vertical movement, chooses the nearest valid timeline position when the pointer is outside the list, and automatically scrolls while held near the top or bottom of the browser window.
+
+## Prompt 11: release-only placement
+
+I asked the AI to keep a dragged card moving freely until the player releases the mouse or touch. The timeline no longer changes positions during the drag. It previews the nearest valid destination, commits one reorder on release, and then smoothly settles the card into that position.
+
+## Prompt 12: time-guess and instruction refinements
+
+I asked the AI to change the time-guess example to `eg: 2000`, remove focus from the field when Enter is pressed, and move a shorter gameplay instruction directly below the timeline heading and date. The instruction now emphasizes dragging, pinning confident choices, and using time guesses to organize the remaining events.
