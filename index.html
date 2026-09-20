@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ChronoClash is a historical timeline challenge powered by Wikimedia's On This Day API.">
+    <title>ChronoClash — Historical Timeline Challenge</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="wordmark" href="./" aria-label="ChronoClash home">
+          <span class="wordmark-mark" aria-hidden="true">CC</span>
+          <span>ChronoClash</span>
+        </a>
+        <p class="header-kicker">A historical timeline challenge</p>
+      </div>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <p class="eyebrow">Recent events. One day in history.</p>
+        <h1 id="page-title">Can you put the past in its place?</h1>
+        <p class="intro-copy">Choose a date, then arrange up to seven of its most recent historical events from earliest to latest. The years stay hidden until you submit.</p>
+      </section>
+
+      <section class="date-panel" id="date-panel" aria-labelledby="date-heading">
+        <div class="section-heading">
+          <div>
+            <p class="section-number" aria-hidden="true">01</p>
+            <h2 id="date-heading">Choose a date</h2>
+          </div>
+          <button class="button button-secondary" id="today-button" type="button">Play Today</button>
+        </div>
+
+        <form id="date-form" class="date-form">
+          <div class="field">
+            <label for="month-select">Month</label>
+            <select id="month-select" name="month"></select>
+          </div>
+          <div class="field">
+            <label for="day-select">Day</label>
+            <select id="day-select" name="day"></select>
+          </div>
+          <button class="button button-primary load-button" id="load-button" type="submit">Load Challenge</button>
+        </form>
+      </section>
+
+      <div id="status-message" class="status-message" role="status" aria-live="polite"></div>
+
+      <section id="game-section" class="game-section" aria-labelledby="game-heading" hidden>
+        <div class="section-heading game-heading-row">
+          <div>
+            <p class="section-number" aria-hidden="true">02</p>
+            <h2 id="game-heading">Build the timeline</h2>
+            <p id="challenge-date" class="challenge-date"></p>
+          </div>
+          <p class="direction-note">Earliest <span aria-hidden="true">→</span> Latest</p>
+        </div>
+
+        <ol id="event-list" class="event-list" aria-label="Events to arrange"></ol>
+
+        <div class="submit-row">
+          <p>Use the arrow buttons to change each event's position.</p>
+          <button class="button button-accent" id="submit-button" type="button">Submit Timeline</button>
+        </div>
+      </section>
+
+      <section id="results-section" class="results-section" aria-labelledby="results-heading" hidden>
+        <div class="section-heading">
+          <div>
+            <p class="section-number" aria-hidden="true">03</p>
+            <h2 id="results-heading">Your result</h2>
+          </div>
+        </div>
+
+        <div class="score-panel">
+          <p class="score-label">Timeline Score</p>
+          <p class="score-value" id="timeline-score">0/21</p>
+          <p class="exact-score" id="exact-score">Exact Positions: 0/7</p>
+        </div>
+
+        <div class="correct-timeline">
+          <h3>Correct timeline</h3>
+          <ol id="correct-list" class="correct-list"></ol>
+        </div>
+
+        <div class="result-actions" aria-label="Result actions">
+          <button class="button button-primary" id="retry-button" type="button">Try Again</button>
+          <button class="button button-secondary" id="choose-date-button" type="button">Choose Another Date</button>
+          <button class="button button-secondary" id="copy-link-button" type="button">Copy Challenge Link</button>
+          <button class="button button-accent" id="copy-result-button" type="button">Copy Result</button>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>Historical data from <a href="https://api.wikimedia.org/wiki/Feed_API/Reference/On_this_day" target="_blank" rel="noreferrer">Wikimedia</a>.</p>
+    </footer>
+  </body>
+</html>
