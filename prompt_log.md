@@ -60,3 +60,11 @@ I asked the AI to keep each event card's color unchanged while it moves, add an 
 ## Prompt 6: drag controls and unique colors
 
 I asked the AI to simplify the introductory description, replace the visible arrow buttons with drag controls, and give all seven event cards clearly different colors without relying on red or green. The cards support mouse dragging, touch dragging from the handle, and keyboard reordering with the Up and Down keys. Each color is assigned once when a challenge loads and stays with that event.
+
+## Prompt 7: pins and time guesses
+
+I asked the AI to enlarge the event text, add a pin button, and add a field where players can record when they think each event happened. A pinned event stays in its numbered position while unpinned cards move around it. Time guesses stay attached to their events, do not affect scoring, and are cleared with pins when the player selects Try Again.
+
+## Prompt 8: pointer-only dragging
+
+I asked the AI to repair dragging, remove the keyboard movement control, and make the time-guess input smaller and inline with its label. Reordering now uses one pointer-based implementation for mouse, touch, and pen input. The drag grip is no longer a button, and the compact guess field uses `2000` as its example.

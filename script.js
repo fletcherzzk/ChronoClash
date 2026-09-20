@@ -18,7 +18,6 @@ const state = {
   requestController: null
 };
 
-let draggedEventId = null;
 let pointerDraggedEventId = null;
 
 const elements = {
@@ -294,7 +293,9 @@ async function loadChallenge(dateKey) {
     // Assign every displayed event one unique color that stays with it as it moves.
     const coloredEvents = selectedEvents.map((event, index) => ({
       ...event,
-      colorIndex: index
+      colorIndex: index,
+      pinned: false,
+      annotation: ""
     }));
 
     state.dateKey = dateKey;
@@ -326,19 +327,59 @@ async function loadChallenge(dateKey) {
   }
 }
 
-function createDragHandle(index) {
+function createDragHandle(index, isPinned) {
+  const handle = document.createElement("span");
+  const isDisabled = state.submitted || isPinned;
+  handle.className = "drag-handle";
+  handle.classList.toggle("is-disabled", isDisabled);
+  handle.textContent = "\u283f";
+  handle.setAttribute("role", "img");
+  handle.setAttribute("aria-disabled", String(isDisabled));
+  handle.setAttribute(
+    "aria-label",
+    isPinned
+      ? `Event at position ${index + 1} is pinned`
+      : `Drag event at position ${index + 1}`
+  );
+  handle.title = isPinned ? "Unpin this event before moving it" : "Drag to reorder";
+  return handle;
+}
+
+function createPinButton(index, isPinned) {
   const button = document.createElement("button");
   button.type = "button";
-  button.className = "drag-handle";
-  button.textContent = "\u283f";
+  button.className = "pin-button";
+  button.textContent = isPinned ? "Pinned" : "Pin";
   button.dataset.index = String(index);
   button.disabled = state.submitted;
+  button.draggable = false;
+  button.setAttribute("aria-pressed", String(isPinned));
   button.setAttribute(
     "aria-label",
-    `Drag event at position ${index + 1}. Use the Up and Down arrow keys to move it.`
+    `${isPinned ? "Unpin" : "Pin"} event at position ${index + 1}`
   );
-  button.title = "Drag to reorder";
   return button;
+}
+
+function createAnnotationField(event) {
+  const label = document.createElement("label");
+  label.className = "annotation-field";
+
+  const labelText = document.createElement("span");
+  labelText.textContent = "Your time guess";
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "event-annotation";
+  input.dataset.eventId = event.id;
+  input.value = event.annotation;
+  input.maxLength = 8;
+  input.inputMode = "numeric";
+  input.placeholder = "2000";
+  input.disabled = state.submitted;
+
+  label.append(labelText, input);
+  return label;
 }
 
 function renderGame() {
@@ -349,8 +390,8 @@ function renderGame() {
     const item = document.createElement("li");
     item.className = "event-card";
     item.classList.add(`event-color-${event.colorIndex}`);
+    item.classList.toggle("is-pinned", event.pinned);
     item.dataset.eventId = event.id;
-    item.draggable = !state.submitted;
 
     const position = document.createElement("span");
     position.className = "event-position";
@@ -358,6 +399,7 @@ function renderGame() {
     position.setAttribute("aria-hidden", "true");
 
     const content = document.createElement("div");
+    content.className = "event-content";
 
     if (state.submitted) {
       const year = document.createElement("span");
@@ -369,140 +411,111 @@ function renderGame() {
     const text = document.createElement("p");
     text.className = "event-text";
     text.textContent = event.text;
-    content.append(text);
+    content.append(text, createAnnotationField(event));
 
-    item.append(position, content, createDragHandle(index));
+    const actions = document.createElement("div");
+    actions.className = "card-actions";
+    actions.append(
+      createPinButton(index, event.pinned),
+      createDragHandle(index, event.pinned)
+    );
+
+    item.append(position, content, actions);
     elements.eventList.append(item);
   });
 
   elements.submitButton.disabled = state.submitted;
 }
 
-function moveEvent(index, direction) {
-  if (state.submitted) {
-    return;
-  }
-
-  const destination = direction === "up" ? index - 1 : index + 1;
-
-  if (destination < 0 || destination >= state.playerOrder.length) {
-    return;
-  }
-
-  [state.playerOrder[index], state.playerOrder[destination]] = [
-    state.playerOrder[destination],
-    state.playerOrder[index]
-  ];
-
-  renderGame();
-
-  const movedEvent = state.playerOrder[destination];
-  const movedCard = elements.eventList.querySelector(`[data-event-id="${movedEvent.id}"]`);
-  movedCard.querySelector(".drag-handle").focus();
-  showStatus(`Moved event to position ${destination + 1}.`);
-}
-
-function moveEventToIndex(eventId, destinationIndex) {
-  if (state.submitted) {
-    return;
-  }
-
+function reorderEventInState(eventId, destinationIndex) {
   const sourceIndex = state.playerOrder.findIndex((event) => event.id === eventId);
+  const sourceEvent = state.playerOrder[sourceIndex];
+  const destinationEvent = state.playerOrder[destinationIndex];
 
-  if (sourceIndex < 0 || destinationIndex < 0 || sourceIndex === destinationIndex) {
-    return;
+  if (
+    state.submitted
+    || !sourceEvent
+    || !destinationEvent
+    || sourceEvent.pinned
+    || destinationEvent.pinned
+    || sourceIndex === destinationIndex
+  ) {
+    return false;
   }
 
-  const [movedEvent] = state.playerOrder.splice(sourceIndex, 1);
-  state.playerOrder.splice(destinationIndex, 0, movedEvent);
-  renderGame();
-  showStatus(`Moved event to position ${destinationIndex + 1}.`);
-}
-
-function clearDragStyles() {
-  elements.eventList.querySelectorAll(".event-card").forEach((card) => {
-    card.classList.remove("is-dragging", "drag-over");
-  });
-}
-
-// Desktop browsers use the native drag-and-drop events.
-function handleDragStart(event) {
-  const card = event.target.closest(".event-card");
-
-  if (!card || state.submitted) {
-    event.preventDefault();
-    return;
-  }
-
-  draggedEventId = card.dataset.eventId;
-  card.classList.add("is-dragging");
-  event.dataTransfer.effectAllowed = "move";
-  event.dataTransfer.setData("text/plain", draggedEventId);
-}
-
-function handleDragOver(event) {
-  if (!draggedEventId || state.submitted) {
-    return;
-  }
-
-  const targetCard = event.target.closest(".event-card");
-
-  if (!targetCard || targetCard.dataset.eventId === draggedEventId) {
-    return;
-  }
-
-  event.preventDefault();
-  elements.eventList.querySelectorAll(".drag-over").forEach((card) => {
-    card.classList.remove("drag-over");
-  });
-  targetCard.classList.add("drag-over");
-  event.dataTransfer.dropEffect = "move";
-}
-
-function handleDrop(event) {
-  const targetCard = event.target.closest(".event-card");
-
-  if (!draggedEventId || !targetCard) {
-    return;
-  }
-
-  event.preventDefault();
-  const destinationIndex = state.playerOrder.findIndex(
-    (item) => item.id === targetCard.dataset.eventId
+  const movableEvents = state.playerOrder.filter((event) => !event.pinned);
+  const sourceMovableIndex = movableEvents.findIndex((event) => event.id === eventId);
+  const destinationMovableIndex = movableEvents.findIndex(
+    (event) => event.id === destinationEvent.id
   );
-  const eventId = draggedEventId;
-  draggedEventId = null;
-  clearDragStyles();
-  moveEventToIndex(eventId, destinationIndex);
+  const [movedEvent] = movableEvents.splice(sourceMovableIndex, 1);
+  movableEvents.splice(destinationMovableIndex, 0, movedEvent);
+
+  let movableIndex = 0;
+  state.playerOrder = state.playerOrder.map((event) => {
+    if (event.pinned) {
+      return event;
+    }
+
+    const nextEvent = movableEvents[movableIndex];
+    movableIndex += 1;
+    return nextEvent;
+  });
+
+  return true;
 }
 
-function handleDragEnd() {
-  draggedEventId = null;
-  clearDragStyles();
+function togglePinnedEvent(index) {
+  const event = state.playerOrder[index];
+
+  if (!event || state.submitted) {
+    return;
+  }
+
+  event.pinned = !event.pinned;
+  renderGame();
+  const pinButton = elements.eventList.querySelector(
+    `[data-event-id="${event.id}"] .pin-button`
+  );
+  pinButton.focus();
+  showStatus(
+    event.pinned
+      ? `Pinned event at position ${index + 1}.`
+      : `Unpinned event at position ${index + 1}.`,
+    "success"
+  );
 }
 
 function updateCardPositionLabels() {
   [...elements.eventList.children].forEach((card, index) => {
     card.querySelector(".event-position").textContent = String(index + 1);
     const handle = card.querySelector(".drag-handle");
-    handle.dataset.index = String(index);
-    handle.setAttribute(
+    const pinButton = card.querySelector(".pin-button");
+    handle.setAttribute("aria-label", `Drag event at position ${index + 1}`);
+    pinButton.dataset.index = String(index);
+    pinButton.setAttribute(
       "aria-label",
-      `Drag event at position ${index + 1}. Use the Up and Down arrow keys to move it.`
+      `${pinButton.getAttribute("aria-pressed") === "true" ? "Unpin" : "Pin"} event at position ${index + 1}`
     );
   });
 }
 
-// Touch users drag from the handle; the DOM follows the finger until release.
+// Mouse, touch, and pen users drag from the grip; the cards follow the pointer.
 function handlePointerDown(event) {
   const handle = event.target.closest(".drag-handle");
 
-  if (!handle || event.pointerType === "mouse" || state.submitted) {
+  if (!handle || handle.classList.contains("is-disabled") || state.submitted) {
     return;
   }
 
   event.preventDefault();
   const card = handle.closest(".event-card");
+  const draggedEvent = state.playerOrder.find((item) => item.id === card.dataset.eventId);
+
+  if (!draggedEvent || draggedEvent.pinned) {
+    return;
+  }
+
   pointerDraggedEventId = card.dataset.eventId;
   handle.setPointerCapture(event.pointerId);
   card.classList.add("is-dragging");
@@ -516,18 +529,29 @@ function handlePointerMove(event) {
   event.preventDefault();
   const pointedElement = document.elementFromPoint(event.clientX, event.clientY);
   const targetCard = pointedElement ? pointedElement.closest(".event-card") : null;
-  const draggedCard = elements.eventList.querySelector(
-    `[data-event-id="${pointerDraggedEventId}"]`
-  );
+  const targetEvent = targetCard
+    ? state.playerOrder.find((item) => item.id === targetCard.dataset.eventId)
+    : null;
 
-  if (!targetCard || !draggedCard || targetCard === draggedCard) {
+  if (
+    !targetCard
+    || !targetEvent
+    || targetEvent.pinned
+    || targetCard.dataset.eventId === pointerDraggedEventId
+  ) {
     return;
   }
 
-  const targetBounds = targetCard.getBoundingClientRect();
-  const placeAfter = event.clientY > targetBounds.top + targetBounds.height / 2;
-  const referenceCard = placeAfter ? targetCard.nextElementSibling : targetCard;
-  elements.eventList.insertBefore(draggedCard, referenceCard);
+  const destinationIndex = state.playerOrder.findIndex((item) => item.id === targetEvent.id);
+
+  if (!reorderEventInState(pointerDraggedEventId, destinationIndex)) {
+    return;
+  }
+
+  state.playerOrder.forEach((item) => {
+    const card = elements.eventList.querySelector(`[data-event-id="${item.id}"]`);
+    elements.eventList.append(card);
+  });
   updateCardPositionLabels();
 }
 
@@ -536,11 +560,8 @@ function finishPointerDrag() {
     return;
   }
 
-  const orderedIds = [...elements.eventList.children].map((card) => card.dataset.eventId);
-  const eventsById = new Map(state.playerOrder.map((event) => [event.id, event]));
   const movedEventId = pointerDraggedEventId;
   pointerDraggedEventId = null;
-  state.playerOrder = orderedIds.map((id) => eventsById.get(id));
   const destinationIndex = state.playerOrder.findIndex((event) => event.id === movedEventId);
   renderGame();
   showStatus(`Moved event to position ${destinationIndex + 1}.`);
@@ -681,24 +702,30 @@ function attachEventListeners() {
     loadChallenge(todayKey);
   });
 
-  elements.eventList.addEventListener("keydown", (event) => {
-    const handle = event.target.closest(".drag-handle");
+  elements.eventList.addEventListener("click", (event) => {
+    const pinButton = event.target.closest(".pin-button");
 
-    if (!handle || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) {
+    if (pinButton) {
+      togglePinnedEvent(Number(pinButton.dataset.index));
+    }
+  });
+
+  elements.eventList.addEventListener("input", (event) => {
+    const input = event.target.closest(".event-annotation");
+
+    if (!input) {
       return;
     }
 
-    event.preventDefault();
-    moveEvent(
-      Number(handle.dataset.index),
-      event.key === "ArrowUp" ? "up" : "down"
+    const annotatedEvent = state.playerOrder.find(
+      (item) => item.id === input.dataset.eventId
     );
+
+    if (annotatedEvent) {
+      annotatedEvent.annotation = input.value;
+    }
   });
 
-  elements.eventList.addEventListener("dragstart", handleDragStart);
-  elements.eventList.addEventListener("dragover", handleDragOver);
-  elements.eventList.addEventListener("drop", handleDrop);
-  elements.eventList.addEventListener("dragend", handleDragEnd);
   elements.eventList.addEventListener("pointerdown", handlePointerDown);
   elements.eventList.addEventListener("pointermove", handlePointerMove);
   elements.eventList.addEventListener("pointerup", finishPointerDrag);

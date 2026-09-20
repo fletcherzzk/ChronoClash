@@ -48,6 +48,7 @@ a {
 
 button:focus-visible,
 select:focus-visible,
+input:focus-visible,
 a:focus-visible {
   outline: 3px solid var(--red);
   outline-offset: 3px;
@@ -464,19 +465,14 @@ select {
   background: #edf0f3;
 }
 
-.event-card[draggable="true"] {
-  cursor: grab;
-}
-
 .event-card.is-dragging {
   opacity: 0.55;
   cursor: grabbing;
   box-shadow: 0 10px 26px rgba(16, 36, 62, 0.2);
 }
 
-.event-card.drag-over {
-  outline: 3px dashed var(--card-accent);
-  outline-offset: 3px;
+.event-card.is-pinned {
+  box-shadow: inset 0 0 0 2px var(--card-accent);
 }
 
 .event-position {
@@ -495,9 +491,52 @@ select {
 .event-text {
   margin: 0;
   color: var(--ink);
-  font-size: 1.15rem;
-  line-height: 1.65;
+  font-size: 1.3rem;
+  line-height: 1.6;
   overflow-wrap: anywhere;
+}
+
+.event-content {
+  min-width: 0;
+}
+
+.annotation-field {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 13px;
+  color: var(--muted);
+  font-family: Arial, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.annotation-field > span {
+  white-space: nowrap;
+}
+
+.event-annotation {
+  width: 78px;
+  min-height: 34px;
+  padding: 5px 8px;
+  border: 1px solid var(--card-accent);
+  border-radius: 2px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.82);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.95rem;
+  text-transform: none;
+}
+
+.event-annotation::placeholder {
+  color: #6d7279;
+}
+
+.event-annotation:disabled {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .event-year {
@@ -508,6 +547,12 @@ select {
   font-size: 0.95rem;
   font-weight: 800;
   letter-spacing: 0.06em;
+}
+
+.card-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: stretch;
 }
 
 .drag-handle {
@@ -528,20 +573,46 @@ select {
   touch-action: none;
 }
 
-.drag-handle:hover:not(:disabled) {
+.pin-button {
+  min-width: 46px;
+  min-height: 34px;
+  padding: 5px 7px;
+  border: 2px solid var(--card-accent);
+  border-radius: 2px;
+  color: var(--card-accent);
+  background: #fff;
+  font-family: Arial, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.pin-button:hover:not(:disabled),
+.pin-button[aria-pressed="true"] {
+  color: #fff;
+  background: var(--card-accent);
+}
+
+.pin-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.drag-handle:hover:not(.is-disabled) {
   color: var(--card-accent);
   background: #fff;
 }
 
-.drag-handle:active:not(:disabled) {
+.drag-handle:active:not(.is-disabled) {
   cursor: grabbing;
 }
 
-.drag-handle:disabled {
+.drag-handle.is-disabled {
   border-color: var(--border);
   color: #9b9994;
   background: transparent;
   cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .submit-row {
@@ -690,7 +761,7 @@ footer a {
     font-size: 0.66rem;
   }
 
-  .drag-handle {
+  .card-actions {
     grid-column: 2;
     justify-self: start;
   }
@@ -739,6 +810,12 @@ footer a {
 
   .event-card {
     padding: 14px 12px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .card-actions {
+    grid-column: 1;
+    grid-auto-flow: column;
   }
 
   .timeline-layout {
