@@ -1,3 +1,6 @@
+(This file is written by Chatgpt and I have revised this)
+
+
 # ChronoClash
 
 ChronoClash is a small browser game that turns real historical events into a timeline challenge. Choose a month and day, arrange up to seven of its most recent events from earliest to latest, and submit your answer to see your score.
@@ -6,20 +9,22 @@ The project uses only HTML, CSS, and JavaScript. It has no framework, build step
 
 ## Run the project locally
 
-The simplest option is to open `index.html` in a browser. If your browser restricts API requests from local files, serve the folder with a small local web server instead:
+There are no packages or dependencies to install. The simplest option is to download or clone the repository and open `index.html` in a modern web browser.
+
+If your browser restricts API requests from local files, use Python 3 to start a small local web server from the project folder:
 
 ```bash
 python -m http.server 8000
 ```
 
-Then visit `http://localhost:8000`.
+Then visit `http://localhost:8000` in your browser. Stop the server by pressing `Ctrl+C` in the terminal.
 
 ## How to play
 
 1. Select a month and day, or choose **Play Today**.
 2. Select **Load Challenge** to fetch events for that date.
 3. Add an optional time guess to each event and press Enter to finish the entry. Pin any card you want to lock in its current position.
-4. Hold and drag anywhere on an unpinned event card, except its Pin button or time field, to arrange the events from earliest to latest. The card follows the pointer freely and changes position only when you release it. You can move outside the timeline width, and holding near the top or bottom edge scrolls the page automatically.
+4. Hold and drag anywhere on an unpinned event card, except its Pin button or time field, to arrange the events from earliest to latest. The card follows the pointer freely and changes position only when you release it.
 5. Select **Submit Timeline** to reveal the dates, the correct order, and your score.
 6. Try the same challenge again, choose another date, or copy a link to share it.
 
@@ -31,13 +36,20 @@ ChronoClash uses Wikimedia's official On This Day API:
 https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/events/MM/DD
 ```
 
-The response contains an `events` array. The app keeps entries with a numeric year and nonempty event text, but removes descriptions that contain an explicit written year because that would reveal too much of the answer. The filter always rejects a description containing its own API year. It also recognizes common four-digit years and decades, years labeled BC, BCE, AD, or CE, and early years written after words such as "in," "since," "from," or "year."
+### How the API call works
 
-The remaining events are sorted from newest to oldest. The app walks through that sorted list and selects the seven most recent events from seven distinct years. Only after those events are selected does it use a seeded shuffle based on the `MM-DD` string to set their displayed order.
+The app uses the browser's built-in `fetch()` function, so no external JavaScript modules are needed. It sends a GET request to the Wikimedia endpoint with the selected month and day as two-digit URL path values, such as `09/20`. Wikimedia returns JSON containing an `events` array, and each usable event has a numeric `year` and a text string. The code checks whether the request succeeded, converts the response with `response.json()`, and then filters, sorts, selects, and shuffles the event objects for the game. This public endpoint does not require an API key, account, or other authentication, so there are no credentials to obtain or configure.
 
-If a date has fewer than seven distinct event years, the challenge uses all available events from distinct years. A date with no usable events shows an error. This process means the same date produces the same selected events and starting order, as long as the API data itself has not changed.
+For a commented copy of the request code and a smaller usage example, see `api_code_reference.txt`.
 
-No API key or other secret is required.
+### How events become a challenge
+
+The app keeps entries with a numeric year and nonempty event text, but removes descriptions that contain an explicit written year because that would reveal too much of the answer. It recognizes common four-digit years and decades, years labeled BC, BCE, AD, or CE, and early years written in common date-related phrases.
+
+The remaining events are sorted from newest to oldest. The app selects up to seven events from distinct years and then uses a seeded shuffle based on the `MM-DD` string to set their displayed order.
+
+If a date has fewer than seven usable distinct years, the challenge uses all available events. A date with no usable events shows an error. The seeded process means the same date produces the same selected events and starting order, as long as the API data itself has not changed. 
+(// providing the same events is important because this allows people to play together)
 
 ## Scoring
 
@@ -65,16 +77,18 @@ Suggested manual tests:
 2. Submit an untouched timeline, then use **Try Again**.
 3. Open a valid shared URL such as `?date=09-20`.
 4. Open invalid URLs such as `?date=13-40` or `?date=02-30`; they should safely load today's date.
+   (//For 15113 grading : this is an important feature to prevent possible bugs, I have view this)
 5. Disconnect from the network and load a new challenge; the app should show an error instead of crashing.
 6. Block clipboard permission and try a copy button; the app should explain that copying failed.
 
 ## Project files
 
-- `index.html` — semantic page structure and accessible controls
-- `styles.css` — responsive historical/editorial visual design
-- `script.js` — API request, deterministic challenge generation, game state, scoring, and sharing
-- `prompt_log.md` — record of the AI prompts and how the output was reviewed
+- `index.html` - semantic page structure and accessible controls
+- `styles.css` - responsive historical/editorial visual design
+- `script.js` - API request, deterministic challenge generation, game state, scoring, and sharing
+- `api_code_reference.txt` - a beginner-friendly copy and explanation of the API request code
+- `prompt_log.md` - record of the AI prompts and how the output was reviewed
+
 
 ## Privacy and security
-
 This project does not use credentials or store personal data. If it is extended later with a keyed API, do not place the key in browser JavaScript or commit it to GitHub.

@@ -1,0 +1,114 @@
+CHRONOCLASH API CODE REFERENCE
+================================
+
+This file isolates the part of ChronoClash that communicates with the
+Wikimedia On This Day API. The full working application is in script.js.
+The API is public, so it does not require an API key or authentication.
+
+
+1. API ENDPOINT
+---------------
+
+https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/events/MM/DD
+
+MM is the two-digit month and DD is the two-digit day. For example, the
+endpoint for September 20 is:
+
+https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/events/09/20
+
+
+2. API REQUEST USED IN SCRIPT.JS
+--------------------------------
+
+// Wikimedia's endpoint is keyless and returns historical entries in its events array.
+async function fetchEvents(dateKey, signal) {
+  // Convert a date such as "09-20" into separate month and day values.
+  const [month, day] = dateKey.split("-");
+
+  // Insert those values into the API URL.
+  const endpoint = `https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/events/${month}/${day}`;
+
+  // fetch() sends the web request. The signal lets the app cancel an old
+  // request if the player quickly chooses a different date.
+  const response = await fetch(endpoint, { signal });
+
+  // A response outside the 200-299 range is treated as an error.
+  if (!response.ok) {
+    throw new Error(`Wikimedia returned status ${response.status}.`);
+  }
+
+  // Convert the JSON response body into a JavaScript object.
+  const data = await response.json();
+
+  // Make sure the response contains the array that the game expects.
+  if (!Array.isArray(data.events)) {
+    throw new Error("Wikimedia returned an unexpected response.");
+  }
+
+  // Give the array of event objects back to the calling function.
+  return data.events;
+}
+
+
+3. HOW THE GAME CALLS THE FUNCTION
+----------------------------------
+
+async function exampleLoad(dateKey) {
+  // AbortController is built into modern browsers. It provides the signal
+  // passed to fetchEvents().
+  const controller = new AbortController();
+
+  try {
+    const apiEvents = await fetchEvents(dateKey, controller.signal);
+
+    // Each item is an object. Two important properties are:
+    // event.year -> a number, such as 1969
+    // event.text -> a string describing the event
+    console.log(apiEvents);
+  } catch (error) {
+    if (error.name === "AbortError") {
+      console.log("The request was cancelled.");
+    } else if (error instanceof TypeError) {
+      console.log("Could not reach Wikimedia. Check the internet connection.");
+    } else {
+      console.log(error.message);
+    }
+  }
+}
+
+// Example call for September 20:
+exampleLoad("09-20");
+
+
+4. SIMPLIFIED RESPONSE SHAPE
+----------------------------
+
+The API returns JSON shaped approximately like this:
+
+{
+  "events": [
+    {
+      "year": 1969,
+      "text": "A description of a historical event.",
+      "pages": [
+        // Wikimedia page information may also appear here.
+      ]
+    }
+  ]
+}
+
+ChronoClash only needs the events array and the year and text properties from
+each usable event. After the request, the game removes invalid entries and
+descriptions that reveal a year, sorts the remaining events from newest to
+oldest, selects up to seven distinct years, and applies its date-seeded shuffle.
+
+
+5. IMPORTANT IDEAS
+------------------
+
+- fetch() returns a Promise, so the code uses async and await.
+- response.ok reports whether the HTTP request succeeded.
+- response.json() parses JSON text into normal JavaScript objects and arrays.
+- try/catch prevents network failures from crashing the page.
+- AbortController allows an unfinished request to be cancelled.
+- No API key is stored or sent because this Wikimedia endpoint is keyless.
