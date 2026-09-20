@@ -427,6 +427,8 @@ select {
   border: 1px solid var(--border);
   border-left: 6px solid var(--card-accent);
   background: #e8f2ff;
+  transition: box-shadow 150ms ease, opacity 150ms ease;
+  will-change: transform;
 }
 
 /* Seven unique colors stay attached to their events when cards move. */
@@ -466,9 +468,25 @@ select {
 }
 
 .event-card.is-dragging {
-  opacity: 0.55;
+  position: relative;
+  z-index: 10;
+  opacity: 0.93;
   cursor: grabbing;
-  box-shadow: 0 10px 26px rgba(16, 36, 62, 0.2);
+  box-shadow: 0 14px 30px rgba(16, 36, 62, 0.26);
+  pointer-events: none;
+  transition: none;
+}
+
+.event-card.can-drag {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.event-card.is-settling {
+  position: relative;
+  z-index: 9;
+  transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .event-card.is-pinned {
@@ -555,24 +573,6 @@ select {
   justify-items: stretch;
 }
 
-.drag-handle {
-  display: grid;
-  width: 46px;
-  height: 50px;
-  padding: 0;
-  place-items: center;
-  border: 2px solid var(--card-accent);
-  border-radius: 2px;
-  color: #fff;
-  background: var(--card-accent);
-  font-family: Arial, sans-serif;
-  font-size: 1.65rem;
-  font-weight: 900;
-  line-height: 1;
-  cursor: grab;
-  touch-action: none;
-}
-
 .pin-button {
   min-width: 46px;
   min-height: 34px;
@@ -598,22 +598,6 @@ select {
   opacity: 0.65;
 }
 
-.drag-handle:hover:not(.is-disabled) {
-  color: var(--card-accent);
-  background: #fff;
-}
-
-.drag-handle:active:not(.is-disabled) {
-  cursor: grabbing;
-}
-
-.drag-handle.is-disabled {
-  border-color: var(--border);
-  color: #9b9994;
-  background: transparent;
-  cursor: not-allowed;
-  opacity: 0.65;
-}
 
 .submit-row {
   display: flex;

@@ -18,7 +18,7 @@ const state = {
   requestController: null
 };
 
-let pointerDraggedEventId = null;
+let pointerDrag = null;
 
 const elements = {
   datePanel: document.querySelector("#date-panel"),
@@ -327,24 +327,6 @@ async function loadChallenge(dateKey) {
   }
 }
 
-function createDragHandle(index, isPinned) {
-  const handle = document.createElement("span");
-  const isDisabled = state.submitted || isPinned;
-  handle.className = "drag-handle";
-  handle.classList.toggle("is-disabled", isDisabled);
-  handle.textContent = "\u283f";
-  handle.setAttribute("role", "img");
-  handle.setAttribute("aria-disabled", String(isDisabled));
-  handle.setAttribute(
-    "aria-label",
-    isPinned
-      ? `Event at position ${index + 1} is pinned`
-      : `Drag event at position ${index + 1}`
-  );
-  handle.title = isPinned ? "Unpin this event before moving it" : "Drag to reorder";
-  return handle;
-}
-
 function createPinButton(index, isPinned) {
   const button = document.createElement("button");
   button.type = "button";
@@ -391,6 +373,7 @@ function renderGame() {
     item.className = "event-card";
     item.classList.add(`event-color-${event.colorIndex}`);
     item.classList.toggle("is-pinned", event.pinned);
+    item.classList.toggle("can-drag", !state.submitted && !event.pinned);
     item.dataset.eventId = event.id;
 
     const position = document.createElement("span");
@@ -415,10 +398,7 @@ function renderGame() {
 
     const actions = document.createElement("div");
     actions.className = "card-actions";
-    actions.append(
-      createPinButton(index, event.pinned),
-      createDragHandle(index, event.pinned)
-    );
+    actions.append(createPinButton(index, event.pinned));
 
     item.append(position, content, actions);
     elements.eventList.append(item);
@@ -489,9 +469,7 @@ function togglePinnedEvent(index) {
 function updateCardPositionLabels() {
   [...elements.eventList.children].forEach((card, index) => {
     card.querySelector(".event-position").textContent = String(index + 1);
-    const handle = card.querySelector(".drag-handle");
     const pinButton = card.querySelector(".pin-button");
-    handle.setAttribute("aria-label", `Drag event at position ${index + 1}`);
     pinButton.dataset.index = String(index);
     pinButton.setAttribute(
       "aria-label",
@@ -500,33 +478,89 @@ function updateCardPositionLabels() {
   });
 }
 
-// Mouse, touch, and pen users drag from the grip; the cards follow the pointer.
-function handlePointerDown(event) {
-  const handle = event.target.closest(".drag-handle");
+function animateReorderedCards(cards, previousTops, draggedCard) {
+  cards.forEach((card) => {
+    if (card === draggedCard || typeof card.animate !== "function") {
+      return;
+    }
 
-  if (!handle || handle.classList.contains("is-disabled") || state.submitted) {
+    const distance = previousTops.get(card) - card.getBoundingClientRect().top;
+
+    if (Math.abs(distance) > 1) {
+      card.getAnimations().forEach((animation) => animation.cancel());
+      card.animate(
+        [
+          { transform: `translateY(${distance}px)` },
+          { transform: "translateY(0)" }
+        ],
+        {
+          duration: 180,
+          easing: "cubic-bezier(0.2, 0.8, 0.2, 1)"
+        }
+      );
+    }
+  });
+}
+
+// The whole card is the drag surface, except for its input and Pin button.
+function handlePointerDown(event) {
+  if (
+    event.pointerType === "pen"
+    || (event.button !== undefined && event.button !== 0)
+    || event.target.closest(".pin-button, .annotation-field")
+  ) {
     return;
   }
 
-  event.preventDefault();
-  const card = handle.closest(".event-card");
+  const card = event.target.closest(".event-card");
+
+  if (!card || state.submitted) {
+    return;
+  }
+
   const draggedEvent = state.playerOrder.find((item) => item.id === card.dataset.eventId);
 
   if (!draggedEvent || draggedEvent.pinned) {
     return;
   }
 
-  pointerDraggedEventId = card.dataset.eventId;
-  handle.setPointerCapture(event.pointerId);
-  card.classList.add("is-dragging");
+  event.preventDefault();
+  const cardBounds = card.getBoundingClientRect();
+  pointerDrag = {
+    card,
+    eventId: card.dataset.eventId,
+    pointerId: event.pointerId,
+    grabOffsetY: event.clientY - cardBounds.top,
+    translateY: 0,
+    started: false,
+    hasReordered: false
+  };
+  card.setPointerCapture(event.pointerId);
 }
 
 function handlePointerMove(event) {
-  if (!pointerDraggedEventId) {
+  if (!pointerDrag || event.pointerId !== pointerDrag.pointerId) {
     return;
   }
 
   event.preventDefault();
+  const { card } = pointerDrag;
+  const cardBounds = card.getBoundingClientRect();
+  const layoutTop = cardBounds.top - pointerDrag.translateY;
+  const nextTranslateY = event.clientY - pointerDrag.grabOffsetY - layoutTop;
+
+  if (!pointerDrag.started && Math.abs(nextTranslateY) < 5) {
+    return;
+  }
+
+  if (!pointerDrag.started) {
+    pointerDrag.started = true;
+    card.classList.add("is-dragging");
+  }
+
+  pointerDrag.translateY = nextTranslateY;
+  card.style.transform = `translateY(${nextTranslateY}px)`;
+
   const pointedElement = document.elementFromPoint(event.clientX, event.clientY);
   const targetCard = pointedElement ? pointedElement.closest(".event-card") : null;
   const targetEvent = targetCard
@@ -537,34 +571,73 @@ function handlePointerMove(event) {
     !targetCard
     || !targetEvent
     || targetEvent.pinned
-    || targetCard.dataset.eventId === pointerDraggedEventId
+    || targetCard === card
   ) {
     return;
   }
 
+  const sourceIndex = state.playerOrder.findIndex((item) => item.id === pointerDrag.eventId);
   const destinationIndex = state.playerOrder.findIndex((item) => item.id === targetEvent.id);
+  const targetBounds = targetCard.getBoundingClientRect();
+  const targetMiddle = targetBounds.top + targetBounds.height / 2;
 
-  if (!reorderEventInState(pointerDraggedEventId, destinationIndex)) {
+  if (
+    (destinationIndex > sourceIndex && event.clientY < targetMiddle)
+    || (destinationIndex < sourceIndex && event.clientY > targetMiddle)
+  ) {
+    return;
+  }
+
+  const cards = [...elements.eventList.children];
+  const previousTops = new Map(
+    cards.map((eventCard) => [eventCard, eventCard.getBoundingClientRect().top])
+  );
+  const previousDraggedTop = card.getBoundingClientRect().top;
+
+  if (!reorderEventInState(pointerDrag.eventId, destinationIndex)) {
     return;
   }
 
   state.playerOrder.forEach((item) => {
-    const card = elements.eventList.querySelector(`[data-event-id="${item.id}"]`);
-    elements.eventList.append(card);
+    const eventCard = elements.eventList.querySelector(`[data-event-id="${item.id}"]`);
+    elements.eventList.append(eventCard);
   });
+
+  const draggedTopAfterReorder = card.getBoundingClientRect().top;
+  pointerDrag.translateY += previousDraggedTop - draggedTopAfterReorder;
+  card.style.transform = `translateY(${pointerDrag.translateY}px)`;
+  pointerDrag.hasReordered = true;
+  animateReorderedCards(cards, previousTops, card);
   updateCardPositionLabels();
 }
 
-function finishPointerDrag() {
-  if (!pointerDraggedEventId) {
+function finishPointerDrag(event) {
+  if (!pointerDrag || event.pointerId !== pointerDrag.pointerId) {
     return;
   }
 
-  const movedEventId = pointerDraggedEventId;
-  pointerDraggedEventId = null;
-  const destinationIndex = state.playerOrder.findIndex((event) => event.id === movedEventId);
-  renderGame();
-  showStatus(`Moved event to position ${destinationIndex + 1}.`);
+  const finishedDrag = pointerDrag;
+  pointerDrag = null;
+  finishedDrag.card.classList.remove("is-dragging");
+
+  if (!finishedDrag.started) {
+    return;
+  }
+
+  finishedDrag.card.classList.add("is-settling");
+  requestAnimationFrame(() => {
+    finishedDrag.card.style.transform = "";
+  });
+  window.setTimeout(() => {
+    finishedDrag.card.classList.remove("is-settling");
+  }, 190);
+
+  if (finishedDrag.hasReordered) {
+    const destinationIndex = state.playerOrder.findIndex(
+      (item) => item.id === finishedDrag.eventId
+    );
+    showStatus(`Moved event to position ${destinationIndex + 1}.`);
+  }
 }
 
 function getCorrectOrder() {

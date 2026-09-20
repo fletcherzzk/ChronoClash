@@ -68,3 +68,7 @@ I asked the AI to enlarge the event text, add a pin button, and add a field wher
 ## Prompt 8: pointer-only dragging
 
 I asked the AI to repair dragging, remove the keyboard movement control, and make the time-guess input smaller and inline with its label. Reordering now uses one pointer-based implementation for mouse, touch, and pen input. The drag grip is no longer a button, and the compact guess field uses `2000` as its example.
+
+## Prompt 9: whole-card smooth dragging
+
+I asked the AI to remove the six-dot drag grip and let players drag by holding the event card itself. Dragging now follows the mouse or touch position, waits for a small movement before starting, changes slots only after crossing another card's midpoint, and animates nearby cards into their new positions. The Pin button and time field remain excluded from the drag surface.
