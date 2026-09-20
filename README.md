@@ -28,6 +28,19 @@ Then visit `http://localhost:8000` in your browser. Stop the server by pressing 
 5. Select **Submit Timeline** to reveal the dates, the correct order, and your score.
 6. Try the same challenge again, choose another date, or copy a link to share it.
 
+## Scoring
+
+There are two scores:
+
+- **Exact Positions** counts cards placed in exactly the correct slot.
+- **Timeline Score** checks every pair of cards, and each correctly ordered pair earns one point. Seven cards contain 21 pairs; a shorter challenge automatically uses the correct smaller total.
+
+Years below zero are displayed as BC years, so API year `-44` appears as `44 BC`.
+
+
+
+
+
 ## Public API
 
 ChronoClash uses Wikimedia's official On This Day API:
@@ -51,14 +64,9 @@ The remaining events are sorted from newest to oldest. The app selects up to sev
 If a date has fewer than seven usable distinct years, the challenge uses all available events. A date with no usable events shows an error. The seeded process means the same date produces the same selected events and starting order, as long as the API data itself has not changed. 
 (// providing the same events is important because this allows people to play together)
 
-## Scoring
 
-There are two scores:
 
-- **Exact Positions** counts cards placed in exactly the correct slot.
-- **Timeline Score** checks every pair of cards, and each correctly ordered pair earns one point. Seven cards contain 21 pairs; a shorter challenge automatically uses the correct smaller total.
 
-Years below zero are displayed as BC years, so API year `-44` appears as `44 BC`.
 
 ## Error handling and tests
 
