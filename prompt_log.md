@@ -44,3 +44,7 @@ Any future AI-assisted changes should also be recorded here.
 ## Prompt 2: use the most recent events
 
 I asked the AI to preserve the existing project and change only the challenge selection rules. Valid events now sort from newest to oldest, the app selects up to seven events from distinct recent years, and the existing date-seeded shuffle runs only after selection. I clarified that if fewer than seven distinct years are available, the game should use all of them instead of showing an error.
+
+## Prompt 3: hide explicit years
+
+I asked the AI to remove events whose descriptions contain an explicit year because those descriptions make the timeline answer too obvious. The filtering step now runs before recent-year selection and recognizes common numeric years, decades, era labels such as BC or AD, and early years introduced by common date-related words.

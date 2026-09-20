@@ -30,7 +30,9 @@ ChronoClash uses Wikimedia's official On This Day API:
 https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/events/MM/DD
 ```
 
-The response contains an `events` array. The app keeps every entry with a numeric year and nonempty event text, then sorts the valid events from newest to oldest. It walks through that sorted list and selects the seven most recent events from seven distinct years. Only after those events are selected does it use a seeded shuffle based on the `MM-DD` string to set their displayed order.
+The response contains an `events` array. The app keeps entries with a numeric year and nonempty event text, but removes descriptions that contain an explicit written year because that would reveal too much of the answer. The filter always rejects a description containing its own API year. It also recognizes common four-digit years and decades, years labeled BC, BCE, AD, or CE, and early years written after words such as "in," "since," "from," or "year."
+
+The remaining events are sorted from newest to oldest. The app walks through that sorted list and selects the seven most recent events from seven distinct years. Only after those events are selected does it use a seeded shuffle based on the `MM-DD` string to set their displayed order.
 
 If a date has fewer than seven distinct event years, the challenge uses all available events from distinct years. A date with no usable events shows an error. This process means the same date produces the same selected events and starting order, as long as the API data itself has not changed.
 
@@ -53,6 +55,7 @@ The interface shows useful messages for:
 - Invalid `?date=MM-DD` URL values
 - Network or API failures
 - API responses with no usable historical events
+- Dates where filtering explicit years leaves no playable events
 - Clipboard permission or availability failures
 
 Suggested manual tests:

@@ -187,13 +187,34 @@ function compareEventsNewestFirst(first, second) {
   return first.text > second.text ? 1 : 0;
 }
 
+function containsExplicitYear(text, eventYear) {
+  // Catch common written years, decades, and years labeled BC/BCE/AD/CE.
+  const fourDigitYear = /\b(?:1\d{3}|20\d{2})(?:s|'s)?\b/i;
+  const eraYear = /(?:\b(?:BC|BCE|AD|CE)\s*\d{1,4}\b|\b\d{1,4}\s*(?:BC|BCE|AD|CE)\b)/i;
+  const earlyYearInContext = /\b(?:in|since|from|year)\s+\d{1,3}\b/i;
+  const exactEventYear = Number.isFinite(eventYear)
+    ? new RegExp(`\\b${Math.abs(eventYear)}\\b`)
+    : null;
+
+  return fourDigitYear.test(text)
+    || eraYear.test(text)
+    || earlyYearInContext.test(text)
+    || (exactEventYear && exactEventYear.test(text));
+}
+
 function normalizeEvents(apiEvents) {
   if (!Array.isArray(apiEvents)) {
     return [];
   }
 
   return apiEvents
-    .filter((event) => event && Number.isFinite(event.year) && typeof event.text === "string" && event.text.trim())
+    .filter((event) => {
+      return event
+        && Number.isFinite(event.year)
+        && typeof event.text === "string"
+        && event.text.trim()
+        && !containsExplicitYear(event.text, event.year);
+    })
     .map((event) => ({
       year: event.year,
       text: event.text.trim(),
