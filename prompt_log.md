@@ -52,3 +52,11 @@ I asked the AI to remove events whose descriptions contain an explicit year beca
 ## Prompt 4: color and typography
 
 I asked the AI to make the website more colorful and the fonts a bit larger and more interesting. The stylesheet adds teal, gold, and plum accents, softly colored event cards, larger text and controls, and a Palatino-style heading font using locally available font fallbacks. Card colors follow their positions rather than event years.
+
+## Prompt 5: timeline layout refinements
+
+I asked the AI to keep each event card's color unchanged while it moves, add an earliest-to-latest scale on the right, let the introduction use the full page width, keep the main question on one line on wider screens, and make the movement arrows thicker. Event colors are now assigned from stable event text rather than list position.
+
+## Prompt 6: drag controls and unique colors
+
+I asked the AI to simplify the introductory description, replace the visible arrow buttons with drag controls, and give all seven event cards clearly different colors without relying on red or green. The cards support mouse dragging, touch dragging from the handle, and keyboard reordering with the Up and Down keys. Each color is assigned once when a challenge loads and stays with that event.

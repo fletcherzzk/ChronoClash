@@ -18,6 +18,9 @@ const state = {
   requestController: null
 };
 
+let draggedEventId = null;
+let pointerDraggedEventId = null;
+
 const elements = {
   datePanel: document.querySelector("#date-panel"),
   dateForm: document.querySelector("#date-form"),
@@ -288,9 +291,15 @@ async function loadChallenge(dateKey) {
       throw new Error("This date does not have any usable historical events. Please choose another date.");
     }
 
+    // Assign every displayed event one unique color that stays with it as it moves.
+    const coloredEvents = selectedEvents.map((event, index) => ({
+      ...event,
+      colorIndex: index
+    }));
+
     state.dateKey = dateKey;
-    state.originalOrder = selectedEvents.map((event) => ({ ...event }));
-    state.playerOrder = selectedEvents.map((event) => ({ ...event }));
+    state.originalOrder = coloredEvents.map((event) => ({ ...event }));
+    state.playerOrder = coloredEvents.map((event) => ({ ...event }));
     state.submitted = false;
     state.pairwiseScore = 0;
     state.exactPositions = 0;
@@ -317,16 +326,18 @@ async function loadChallenge(dateKey) {
   }
 }
 
-function createMoveButton(direction, index, isDisabled) {
+function createDragHandle(index) {
   const button = document.createElement("button");
-  const movingUp = direction === "up";
   button.type = "button";
-  button.className = "move-button";
-  button.textContent = movingUp ? "↑" : "↓";
+  button.className = "drag-handle";
+  button.textContent = "\u283f";
   button.dataset.index = String(index);
-  button.dataset.direction = direction;
-  button.disabled = isDisabled || state.submitted;
-  button.setAttribute("aria-label", `Move event at position ${index + 1} ${direction}`);
+  button.disabled = state.submitted;
+  button.setAttribute(
+    "aria-label",
+    `Drag event at position ${index + 1}. Use the Up and Down arrow keys to move it.`
+  );
+  button.title = "Drag to reorder";
   return button;
 }
 
@@ -337,7 +348,9 @@ function renderGame() {
   state.playerOrder.forEach((event, index) => {
     const item = document.createElement("li");
     item.className = "event-card";
+    item.classList.add(`event-color-${event.colorIndex}`);
     item.dataset.eventId = event.id;
+    item.draggable = !state.submitted;
 
     const position = document.createElement("span");
     position.className = "event-position";
@@ -358,14 +371,7 @@ function renderGame() {
     text.textContent = event.text;
     content.append(text);
 
-    const controls = document.createElement("div");
-    controls.className = "move-controls";
-    controls.append(
-      createMoveButton("up", index, index === 0),
-      createMoveButton("down", index, index === state.playerOrder.length - 1)
-    );
-
-    item.append(position, content, controls);
+    item.append(position, content, createDragHandle(index));
     elements.eventList.append(item);
   });
 
@@ -392,7 +398,152 @@ function moveEvent(index, direction) {
 
   const movedEvent = state.playerOrder[destination];
   const movedCard = elements.eventList.querySelector(`[data-event-id="${movedEvent.id}"]`);
-  movedCard.querySelector(`[data-direction="${direction}"]`).focus();
+  movedCard.querySelector(".drag-handle").focus();
+  showStatus(`Moved event to position ${destination + 1}.`);
+}
+
+function moveEventToIndex(eventId, destinationIndex) {
+  if (state.submitted) {
+    return;
+  }
+
+  const sourceIndex = state.playerOrder.findIndex((event) => event.id === eventId);
+
+  if (sourceIndex < 0 || destinationIndex < 0 || sourceIndex === destinationIndex) {
+    return;
+  }
+
+  const [movedEvent] = state.playerOrder.splice(sourceIndex, 1);
+  state.playerOrder.splice(destinationIndex, 0, movedEvent);
+  renderGame();
+  showStatus(`Moved event to position ${destinationIndex + 1}.`);
+}
+
+function clearDragStyles() {
+  elements.eventList.querySelectorAll(".event-card").forEach((card) => {
+    card.classList.remove("is-dragging", "drag-over");
+  });
+}
+
+// Desktop browsers use the native drag-and-drop events.
+function handleDragStart(event) {
+  const card = event.target.closest(".event-card");
+
+  if (!card || state.submitted) {
+    event.preventDefault();
+    return;
+  }
+
+  draggedEventId = card.dataset.eventId;
+  card.classList.add("is-dragging");
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", draggedEventId);
+}
+
+function handleDragOver(event) {
+  if (!draggedEventId || state.submitted) {
+    return;
+  }
+
+  const targetCard = event.target.closest(".event-card");
+
+  if (!targetCard || targetCard.dataset.eventId === draggedEventId) {
+    return;
+  }
+
+  event.preventDefault();
+  elements.eventList.querySelectorAll(".drag-over").forEach((card) => {
+    card.classList.remove("drag-over");
+  });
+  targetCard.classList.add("drag-over");
+  event.dataTransfer.dropEffect = "move";
+}
+
+function handleDrop(event) {
+  const targetCard = event.target.closest(".event-card");
+
+  if (!draggedEventId || !targetCard) {
+    return;
+  }
+
+  event.preventDefault();
+  const destinationIndex = state.playerOrder.findIndex(
+    (item) => item.id === targetCard.dataset.eventId
+  );
+  const eventId = draggedEventId;
+  draggedEventId = null;
+  clearDragStyles();
+  moveEventToIndex(eventId, destinationIndex);
+}
+
+function handleDragEnd() {
+  draggedEventId = null;
+  clearDragStyles();
+}
+
+function updateCardPositionLabels() {
+  [...elements.eventList.children].forEach((card, index) => {
+    card.querySelector(".event-position").textContent = String(index + 1);
+    const handle = card.querySelector(".drag-handle");
+    handle.dataset.index = String(index);
+    handle.setAttribute(
+      "aria-label",
+      `Drag event at position ${index + 1}. Use the Up and Down arrow keys to move it.`
+    );
+  });
+}
+
+// Touch users drag from the handle; the DOM follows the finger until release.
+function handlePointerDown(event) {
+  const handle = event.target.closest(".drag-handle");
+
+  if (!handle || event.pointerType === "mouse" || state.submitted) {
+    return;
+  }
+
+  event.preventDefault();
+  const card = handle.closest(".event-card");
+  pointerDraggedEventId = card.dataset.eventId;
+  handle.setPointerCapture(event.pointerId);
+  card.classList.add("is-dragging");
+}
+
+function handlePointerMove(event) {
+  if (!pointerDraggedEventId) {
+    return;
+  }
+
+  event.preventDefault();
+  const pointedElement = document.elementFromPoint(event.clientX, event.clientY);
+  const targetCard = pointedElement ? pointedElement.closest(".event-card") : null;
+  const draggedCard = elements.eventList.querySelector(
+    `[data-event-id="${pointerDraggedEventId}"]`
+  );
+
+  if (!targetCard || !draggedCard || targetCard === draggedCard) {
+    return;
+  }
+
+  const targetBounds = targetCard.getBoundingClientRect();
+  const placeAfter = event.clientY > targetBounds.top + targetBounds.height / 2;
+  const referenceCard = placeAfter ? targetCard.nextElementSibling : targetCard;
+  elements.eventList.insertBefore(draggedCard, referenceCard);
+  updateCardPositionLabels();
+}
+
+function finishPointerDrag() {
+  if (!pointerDraggedEventId) {
+    return;
+  }
+
+  const orderedIds = [...elements.eventList.children].map((card) => card.dataset.eventId);
+  const eventsById = new Map(state.playerOrder.map((event) => [event.id, event]));
+  const movedEventId = pointerDraggedEventId;
+  pointerDraggedEventId = null;
+  state.playerOrder = orderedIds.map((id) => eventsById.get(id));
+  const destinationIndex = state.playerOrder.findIndex((event) => event.id === movedEventId);
+  renderGame();
+  showStatus(`Moved event to position ${destinationIndex + 1}.`);
 }
 
 function getCorrectOrder() {
@@ -530,13 +681,28 @@ function attachEventListeners() {
     loadChallenge(todayKey);
   });
 
-  elements.eventList.addEventListener("click", (event) => {
-    const button = event.target.closest(".move-button");
+  elements.eventList.addEventListener("keydown", (event) => {
+    const handle = event.target.closest(".drag-handle");
 
-    if (button) {
-      moveEvent(Number(button.dataset.index), button.dataset.direction);
+    if (!handle || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) {
+      return;
     }
+
+    event.preventDefault();
+    moveEvent(
+      Number(handle.dataset.index),
+      event.key === "ArrowUp" ? "up" : "down"
+    );
   });
+
+  elements.eventList.addEventListener("dragstart", handleDragStart);
+  elements.eventList.addEventListener("dragover", handleDragOver);
+  elements.eventList.addEventListener("drop", handleDrop);
+  elements.eventList.addEventListener("dragend", handleDragEnd);
+  elements.eventList.addEventListener("pointerdown", handlePointerDown);
+  elements.eventList.addEventListener("pointermove", handlePointerMove);
+  elements.eventList.addEventListener("pointerup", finishPointerDrag);
+  elements.eventList.addEventListener("pointercancel", finishPointerDrag);
 
   elements.submitButton.addEventListener("click", submitTimeline);
   elements.retryButton.addEventListener("click", retryChallenge);

@@ -18,7 +18,7 @@ Then visit `http://localhost:8000`.
 
 1. Select a month and day, or choose **Play Today**.
 2. Select **Load Challenge** to fetch events for that date.
-3. Use each card's arrow buttons to arrange the events from earliest to latest.
+3. Drag the cards to arrange the events from earliest to latest. On a keyboard, focus a card's drag handle and press the Up or Down arrow key.
 4. Select **Submit Timeline** to reveal the dates, the correct order, and your score.
 5. Try the same challenge again, choose another date, or copy a link to share it.
 
