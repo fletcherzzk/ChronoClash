@@ -10,6 +10,10 @@
   --border: #c9c0b1;
   --success: #315f45;
   --error: #8b2524;
+  --teal: #21665f;
+  --gold: #dca94c;
+  --plum: #704168;
+  --heading-font: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
   --shadow: 0 8px 24px rgba(16, 36, 62, 0.08);
 }
 
@@ -27,6 +31,7 @@ body {
   color: var(--ink);
   background: var(--paper);
   font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
   line-height: 1.55;
 }
 
@@ -55,7 +60,7 @@ a:focus-visible {
 .site-header {
   color: var(--paper-light);
   background: var(--navy);
-  border-bottom: 4px solid var(--red);
+  border-bottom: 5px solid var(--gold);
 }
 
 .header-inner,
@@ -78,7 +83,8 @@ footer {
   align-items: center;
   gap: 12px;
   color: inherit;
-  font-size: 1.32rem;
+  font-family: var(--heading-font);
+  font-size: 1.65rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   text-decoration: none;
@@ -90,9 +96,10 @@ footer {
   height: 38px;
   place-items: center;
   border: 1px solid rgba(255, 253, 248, 0.65);
-  color: var(--paper-light);
+  color: var(--navy);
+  background: var(--gold);
   font-family: Arial, sans-serif;
-  font-size: 0.72rem;
+  font-size: 0.85rem;
   letter-spacing: 0.12em;
 }
 
@@ -120,7 +127,7 @@ main {
   margin: 0 0 10px;
   color: var(--red);
   font-family: Arial, sans-serif;
-  font-size: 0.76rem;
+  font-size: 0.88rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -133,11 +140,17 @@ p {
   text-wrap: pretty;
 }
 
+h1,
+h2,
+h3 {
+  font-family: var(--heading-font);
+}
+
 h1 {
   max-width: 680px;
   margin: 0;
   color: var(--navy);
-  font-size: clamp(2.35rem, 7vw, 4.75rem);
+  font-size: clamp(2.65rem, 7.5vw, 5rem);
   font-weight: 600;
   letter-spacing: -0.035em;
   line-height: 1.03;
@@ -147,7 +160,8 @@ h1 {
   max-width: 620px;
   margin: 24px 0 0;
   color: var(--muted);
-  font-size: 1.08rem;
+  font-size: 1.2rem;
+  line-height: 1.65;
 }
 
 .date-panel,
@@ -172,12 +186,35 @@ h1 {
 .section-heading h2 {
   margin: 0;
   color: var(--navy);
-  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-size: clamp(1.8rem, 4vw, 2.3rem);
   line-height: 1.15;
 }
 
 .section-number {
   margin-bottom: 4px;
+}
+
+/* Each section has a distinct ink color, like chapters in a printed book. */
+.date-panel {
+  border-top: 5px solid var(--gold);
+  background: #fff8e8;
+}
+
+.game-section {
+  border-top: 5px solid var(--teal);
+}
+
+.results-section {
+  border-top: 5px solid var(--plum);
+  background: #faf3f8;
+}
+
+.game-section .section-number {
+  color: var(--teal);
+}
+
+.results-section .section-number {
+  color: var(--plum);
 }
 
 .date-form {
@@ -191,12 +228,13 @@ h1 {
 .field {
   display: grid;
   gap: 7px;
+  min-width: 0;
 }
 
 .field label {
   color: var(--navy);
   font-family: Arial, sans-serif;
-  font-size: 0.82rem;
+  font-size: 0.95rem;
   font-weight: 700;
 }
 
@@ -217,7 +255,7 @@ select {
   border: 1px solid transparent;
   border-radius: 2px;
   font-family: Arial, sans-serif;
-  font-size: 0.85rem;
+  font-size: 1rem;
   font-weight: 700;
   line-height: 1.2;
   cursor: pointer;
@@ -239,12 +277,12 @@ select {
 
 .button-primary {
   color: var(--paper-light);
-  background: var(--navy);
-  border-color: var(--navy);
+  background: var(--teal);
+  border-color: var(--teal);
 }
 
 .button-primary:hover:not(:disabled) {
-  background: var(--navy-light);
+  background: #194e49;
 }
 
 .button-secondary {
@@ -294,7 +332,9 @@ select {
 
 .challenge-date {
   margin: 7px 0 0;
-  color: var(--muted);
+  color: var(--teal);
+  font-style: italic;
+  font-size: 1.15rem;
 }
 
 .direction-note {
@@ -321,6 +361,7 @@ select {
 }
 
 .event-card {
+  --card-accent: var(--teal);
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr) auto;
   gap: 16px;
@@ -328,8 +369,19 @@ select {
   min-height: 108px;
   padding: 16px;
   border: 1px solid var(--border);
-  border-left: 4px solid var(--navy);
-  background: #fff;
+  border-left: 4px solid var(--card-accent);
+  background: #eef7f3;
+}
+
+/* Color follows the numbered slot, so it never hints at an event's year. */
+.event-card:nth-child(3n + 2) {
+  --card-accent: var(--red);
+  background: #fff2eb;
+}
+
+.event-card:nth-child(3n) {
+  --card-accent: var(--plum);
+  background: #f5eff8;
 }
 
 .event-position {
@@ -337,18 +389,20 @@ select {
   width: 38px;
   height: 38px;
   place-items: center;
-  border: 1px solid var(--border);
-  color: var(--navy);
+  border: 1px solid var(--card-accent);
+  color: #fff;
+  background: var(--card-accent);
   font-family: Arial, sans-serif;
-  font-size: 0.86rem;
+  font-size: 1rem;
   font-weight: 700;
 }
 
 .event-text {
   margin: 0;
   color: var(--ink);
-  font-size: 1rem;
-  line-height: 1.55;
+  font-size: 1.15rem;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
 }
 
 .event-year {
@@ -356,7 +410,7 @@ select {
   margin-bottom: 6px;
   color: var(--red);
   font-family: Arial, sans-serif;
-  font-size: 0.79rem;
+  font-size: 0.95rem;
   font-weight: 800;
   letter-spacing: 0.06em;
 }
@@ -368,8 +422,8 @@ select {
 
 .move-button {
   display: grid;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   place-items: center;
   border: 1px solid var(--navy);
@@ -404,7 +458,11 @@ select {
 .submit-row p {
   margin: 0;
   color: var(--muted);
-  font-size: 0.92rem;
+  font-size: 1rem;
+}
+
+.submit-row .button {
+  flex-shrink: 0;
 }
 
 .score-panel {
@@ -416,12 +474,13 @@ select {
   padding: 24px;
   color: #fff;
   background: var(--navy);
+  border-left: 5px solid var(--gold);
 }
 
 .score-label {
   grid-column: 1;
   margin: 0;
-  color: #e7b1aa;
+  color: #f0c674;
 }
 
 .score-value {
@@ -429,6 +488,7 @@ select {
   margin: 2px 0 0;
   font-size: clamp(2.25rem, 7vw, 3.75rem);
   font-weight: 700;
+  font-family: var(--heading-font);
   line-height: 1;
 }
 
@@ -444,7 +504,7 @@ select {
 .correct-timeline h3 {
   margin: 0;
   color: var(--navy);
-  font-size: 1.28rem;
+  font-size: 1.55rem;
 }
 
 .correct-list {
@@ -462,7 +522,7 @@ select {
 .correct-year {
   color: var(--red);
   font-family: Arial, sans-serif;
-  font-size: 0.88rem;
+  font-size: 1rem;
   font-weight: 800;
 }
 

@@ -48,3 +48,7 @@ I asked the AI to preserve the existing project and change only the challenge se
 ## Prompt 3: hide explicit years
 
 I asked the AI to remove events whose descriptions contain an explicit year because those descriptions make the timeline answer too obvious. The filtering step now runs before recent-year selection and recognizes common numeric years, decades, era labels such as BC or AD, and early years introduced by common date-related words.
+
+## Prompt 4: color and typography
+
+I asked the AI to make the website more colorful and the fonts a bit larger and more interesting. The stylesheet adds teal, gold, and plum accents, softly colored event cards, larger text and controls, and a Palatino-style heading font using locally available font fallbacks. Card colors follow their positions rather than event years.
